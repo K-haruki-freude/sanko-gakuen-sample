@@ -1,10 +1,13 @@
 import tkinter
+import random
+import time
 
 masu = [
     [0, 0, 0],
     [0, 0, 0],
     [0, 0, 0],
 ]
+shirushi = 0
 
 def masume():
     cvs.delete("all")
@@ -20,17 +23,33 @@ def masume():
           if masu[y][x] == 2:
              cvs.create_line(X+20, Y+20, X+180, Y+180, fill="red", width=12)
              cvs.create_line(X+180, Y+20, X+20, Y+180, fill="red", width=12)
+    cvs.update()
 
 def click(e):
+    global shirushi
     mx = int(e.x/200)
     my = int(e.y/200)
     if mx>2: mx = 2
     if my>2: my = 2
     if masu[my][mx] == 0:
        masu[my][mx] = 1
-    else:
-       masu[my][mx] = 0
+       shirushi = shirushi + 1
     masume()
+    time.sleep(0.5)
+    if shirushi < 9:
+       computer()
+
+def computer():
+   global shirushi
+   while True:
+      x= random.randint(0, 2)
+      y= random.randint(0, 2)
+      if masu[y][x] == 0:
+          masu[y][x] = 2
+          shirushi = shirushi + 1
+          masume()
+          time.sleep(0.5)
+          break
 
 
 root = tkinter.Tk()
