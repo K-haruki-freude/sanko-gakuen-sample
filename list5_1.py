@@ -1,5 +1,11 @@
 import tkinter
 
+masu = [
+    [1, 0, 0],
+    [0, 0, 2],
+    [0, 0, 0],
+]
+
 def masume():
     cvs.create_line(200, 0, 200, 600, fill="gray", width=8)
     cvs.create_line(400, 0, 400, 600, fill="gray", width=8)
