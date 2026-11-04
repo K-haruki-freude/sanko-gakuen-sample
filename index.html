@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎈 風船をマウスで追いかける</title>
+  <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
+  <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: #9dd4f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    h1    { color: #1a3a5c; margin-bottom: 6px; font-size: 22px; }
+    .desc { color: #2a4a6c; margin-bottom: 18px; font-size: 13px; }
+    canvas {
+      background: #87CEEB;
+      border-radius: 14px;
+      box-shadow: 0 6px 24px rgba(0,0,60,.2);
+    }
+    #loading {
+      position: fixed; inset: 0;
+      background: rgba(135,206,235,.92);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 12px; font-size: 20px; color: #1a3a5c; z-index: 100;
+    }
+    #loading small { font-size: 13px; color: #2a5a8c; }
+  </style>
+</head>
+<body>
+  <div id="loading">
+    🎈 読み込み中...
+    <small>はじめは少し時間がかかります（10〜20秒ほど）</small>
+  </div>
+
+  <h1>🎈 風船をマウスで追いかける</h1>
+  <p class="desc">マウスを動かすと風船がついてきます。クリックすると色が変わります。</p>
+  <canvas id="cvs" width="860" height="560"></canvas>
+
+  <script type="py">
+import math
+import js
+from pyodide.ffi import create_proxy
+from pyscript import document
+
+
+# ── ① 変数 ────────────────────────────────────────────────────────
+COL = ["red", "orange", "yellow", "lime", "cyan", "blue", "violet"]
+bc = 0
+bx = 430.0
+by = 280.0
+mx = 430.0
+my = 280.0
+
+# ★ 追加：波紋を管理するリスト
+# 各波紋は { x座標, y座標, 半径, 不透明度, 色 } の辞書で管理する
+ripples = []
+
+
+# ── ② Canvas ──────────────────────────────────────────────────────
+canvas = document.getElementById("cvs")
+ctx    = canvas.getContext("2d")
+
+
+# ── ③ イベント ────────────────────────────────────────────────────
+def on_click(e):
+    global bc
+
+    # ★ クリックした座標を取得して波紋リストに追加
+    rect = canvas.getBoundingClientRect()
+    rx = e.clientX - rect.left
+    ry = e.clientY - rect.top
+    ripples.append({
+        "x":     rx,
+        "y":     ry,
+        "r":     0.0,      # 半径（最初は0）
+        "alpha": 1.0,      # 不透明度（最初は1.0＝完全不透明）
+        "color": COL[bc],  # クリック時の色を記録
+    })
+
+    # 色を次に進める
+    bc = (bc + 1) % 7
+
+def on_move(e):
+    global mx, my
+    rect = canvas.getBoundingClientRect()
+    mx = e.clientX - rect.left
+    my = e.clientY - rect.top
+
+canvas.addEventListener("click",     create_proxy(on_click))
+canvas.addEventListener("mousemove", create_proxy(on_move))
+
+
+# ── ④ 楕円ヘルパー ────────────────────────────────────────────────
+def draw_oval(cx, cy, rx, ry, color):
+    ctx.save()
+    ctx.translate(cx, cy)
+    ctx.scale(rx / ry, 1)
+    ctx.beginPath()
+    ctx.arc(0, 0, ry, 0, math.pi * 2)
+    ctx.fillStyle = color
+    ctx.fill()
+    ctx.restore()
+
+
+# ── ⑤ 描画ループ ──────────────────────────────────────────────────
+def draw():
+    global bx, by
+
+    # 風船を動かす
+    if bx < mx: bx += 20
+    if mx < bx: bx -= 20
+    if by < my: by += 20
+    if my < by: by -= 20
+
+    ctx.clearRect(0, 0, 860, 560)
+
+    # ★ 波紋を描く（風船より先 → 風船の後ろに表示される）
+    for ripple in ripples[:]:          # [:] でコピーしてから回す
+        ripple["r"]     += 8           # 半径を毎フレーム広げる
+        ripple["alpha"] -= 0.035       # 透明度を毎フレーム下げる
+
+        if ripple["alpha"] <= 0:       # 完全に消えたらリストから削除
+            ripples.remove(ripple)
+            continue
+
+        # 色の名前（例："red"）をRGBAに変換して描画
+        a = round(ripple["alpha"], 3)
+        ctx.save()
+        ctx.globalAlpha = a
+        ctx.beginPath()
+        ctx.arc(ripple["x"], ripple["y"], ripple["r"], 0, math.pi * 2)
+        ctx.strokeStyle = ripple["color"]
+        ctx.lineWidth = 4
+        ctx.stroke()
+        ctx.restore()
+
+    # 風船本体
+    draw_oval(bx, by, 40, 60, COL[bc])
+
+    # ハイライト
+    draw_oval(bx - 17, by - 32, 11, 13, "rgba(255,255,255,0.65)")
+
+    # ひも
+    ctx.beginPath()
+    ctx.moveTo(bx, by + 60)
+    ctx.bezierCurveTo(bx - 12, by + 95, bx + 12, by + 135, bx, by + 178)
+    ctx.strokeStyle = "#555"
+    ctx.lineWidth = 1.5
+    ctx.stroke()
+
+
+# ── ⑥ 起動 ───────────────────────────────────────────────────────
+document.getElementById("loading").style.display = "none"
+js.setInterval(create_proxy(draw), 50)
+  </script>
+</body>
+</html>
