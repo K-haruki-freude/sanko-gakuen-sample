@@ -4,6 +4,10 @@ import random
 img = [None]*14
 card = [0]*26
 face = [0]*26
+proc = 0
+tmr = 0
+sel1 = 0
+sel2 = 0
 
 def draw_card():
     cvs.delete("all")
@@ -24,6 +28,7 @@ def shuffle_card():
         card[r1],card[r2] = card[r2], card[r1]
 
 def click(e):
+    global proc, tmr, sel1, sel2
     x = int(e.x/120)
     y = int(e.y/168)
     if 0<=x and x<=6 and 0<=y and y<=3:
@@ -31,10 +36,36 @@ def click(e):
         if n >= 26:
             return
         if face[n]==0:
-            face[n] = 1
+            if proc==1:
+                face[n] = 1
+                sel1 = n
+                proc = 2
+            elif proc==2:
+                face[n] = 1
+                sel2 = n
+                proc = 3
+                tmr = 0
+
+def main():
+    global proc, tmr
+    tmr +=1
+    draw_card()
+    if proc==0:
+        shuffle_card()
+        proc=1
+    if proc==1:
+        cvs.create_text(780, 580, text="１枚目をめくってください")
+    if proc==2:
+        cvs.create_text(780, 580, text="２枚目をめくってください")
+    if proc==3 and tmr==5: #揃ったか判定
+        if card[sel1]==card[sel2]:
+            face[sel1] = 2
+            face[sel2] = 2
         else:
-            face[n] = 0
-        draw_card()
+            face[sel1] = 0
+            face[sel2] = 0
+        proc = 1
+    root.after(200, main)
 
 root = tkinter.Tk()
 root.title("神経衰弱")
@@ -44,6 +75,5 @@ cvs = tkinter.Canvas(width=960, height=672)
 cvs.pack()
 for i in range(14):
     img[i] = tkinter.PhotoImage(file="card/"+str(i)+".png")
-shuffle_card()
-draw_card()
+main()
 root.mainloop()
