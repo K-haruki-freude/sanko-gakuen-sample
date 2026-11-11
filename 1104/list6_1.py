@@ -8,6 +8,8 @@ proc = 0
 tmr = 0
 sel1 = 0
 sel2 = 0
+you = 0
+com = 0
 
 def draw_card():
     cvs.delete("all")
@@ -47,7 +49,7 @@ def click(e):
                 tmr = 0
 
 def main():
-    global proc, tmr
+    global proc, tmr, sel1, sel2, you, com
     tmr +=1
     draw_card()
     if proc==0:
@@ -57,14 +59,44 @@ def main():
         cvs.create_text(780, 580, text="１枚目をめくってください")
     if proc==2:
         cvs.create_text(780, 580, text="２枚目をめくってください")
-    if proc==3 and tmr==5: #揃ったか判定
+    if proc==3 and tmr==15: #揃ったか判定
         if card[sel1]==card[sel2]:
             face[sel1] = 2
             face[sel2] = 2
+            you += 2
+            proc = 1
+            if you+com==26: proc = 7
         else:
             face[sel1] = 0
             face[sel2] = 0
-        proc = 1
+            proc = 4
+        tmr = 0
+    if proc==4 and tmr==5: # COM １枚目をめくる
+        sel1 = random.randint(0, 25)
+        while face[sel1]!=0: sel1 = (sel1+1)%26
+        face[sel1] = 1
+        proc = 5
+        tmr = 0
+    if proc==5 and tmr==5: # COM ２枚目をめくる
+        sel2 = random.randint(0, 25)
+        while face[sel2]!=0: sel2 = (sel2+1)%26
+        face[sel2] = 1
+        proc = 6
+        tmr = 0
+    if proc==6 and tmr==15: #揃ったか判定
+        if card[sel1]==card[sel2]:
+            face[sel1] = 2
+            face[sel2] = 2
+            com += 2
+            proc =4
+            if you+com==26: proc = 7
+        else:
+            face[sel1] = 0
+            face[sel2] = 0
+            proc =1
+        tmr = 0
+    if proc==7:
+        cvs.create_text(780, 580, text="終了です")
     root.after(200, main)
 
 root = tkinter.Tk()
